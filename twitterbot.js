@@ -47,10 +47,10 @@ async function getTweetContent(status, replyTweet, header, twToTwtch){ // get co
         if (response.statusCode === 200){
             let tweetContent = `${data.full_text}
 
-${twToTwtch}`, res;
-            try{res = await post(twAccount, tweetContent, '', '', '')}
+${twToTwtch}`, txid;
+            try{txid = await post(twAccount, tweetContent, '', '', '')}
             catch(e){console.log(`Error while posting to twetch. `, e)}
-            resTweet(data.user.screen_name, replyTweet, `https://twetch.app/t/${res.txid}`);
+            resTweet(data.user.screen_name, replyTweet, `https://twetch.app/t/${txid}`);
         }else{console.log(`Error while fetching tweet: ${twtToTwtch}, did not archive Tweet on Twetch. `, err);return}
     })
 }
