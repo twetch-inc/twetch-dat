@@ -28,10 +28,12 @@ function createWallet(key) {
     twInstance.wallet.backup();
     return twInstance;
 }
-async function post(instance, content, reply, branch, filesURL, tweet, hide) {
+async function post(instance, content, reply, twData, url, branch, filesURL, tweet, hide) {
     let response = await instance.buildAndPublish('twetch/post@0.0.1', {
         bContent: `${content}${branch}${filesURL}`,
         mapReply: reply,
+        mapTwdata: twData,
+        mapUrl: url,
         payParams: {tweetFromTwetch: tweet,hideTweetFromTwetchLink: hide}
     });
     return response.txid;
@@ -48,7 +50,19 @@ async function getTweetContent(status, replyTweet, header, twToTwtch){ // get co
             let tweetContent = `${data.full_text}
 
 ${twToTwtch}`, txid;
-            try{txid = await post(twAccount, tweetContent, '', '', '')}
+            let twObj = {
+                created_at: data.created_at,
+                twt_id: data.id.toString(),
+                text: data.full_text,
+                user:{
+                    name: data.user.name,
+                    screen_name: data.user.screen_name,
+                    created_at: data.user.created_at,
+                    twt_id: data.user.id.toString(),
+                    profile_image_url: data.user.profile_image_url
+                }
+            };
+            try{txid = await post(twAccount, tweetContent, '', JSON.stringify(twObj), twToTwtch, '')}
             catch(e){console.log(`Error while posting to twetch. `, e)}
             resTweet(data.user.screen_name, replyTweet, `https://twetch.app/t/${txid}`);
         }else{console.log(`Error while fetching tweet: ${twtToTwtch}, did not archive Tweet on Twetch. `, err);return}
