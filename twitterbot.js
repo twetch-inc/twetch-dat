@@ -32,14 +32,14 @@ function createWallet(key) {
 	return twInstance;
 }
 async function post(instance, content, reply, twData, url, branch, filesURL, tweet, hide) {
-	let response = await instance.buildAndPublish('twetch/post@0.0.1', {
-		bContent: `${content}${branch}${filesURL}`,
-		mapReply: reply,
-		mapTwdata: twData,
-		mapUrl: url,
-		payParams: { tweetFromTwetch: tweet, hideTweetFromTwetchLink: hide },
-	});
-	return response.txid;
+    let response = await instance.buildAndPublish('twetch/post@0.0.1', {
+        bContent: `${content}${branch}${filesURL}`,
+        mapReply: reply,
+        mapTwdata: twData,
+        mapUrl: url,
+        payParams: {tweetFromTwetch: tweet,hideTweetFromTwetchLink: hide}
+    });
+    return response.txid;
 }
 var stream = T.stream('statuses/filter', { track: process.env.trackPhrase });
 stream.on('tweet', function (tweet) {
@@ -56,13 +56,10 @@ async function getTweetContent(status, replyTweet, header, twToTwtch) {
 		response
 	) {
 		if (response.statusCode === 200) {
-			let tweetContent = `${data.full_text}
-
-${twToTwtch}`,
-				txid;
+			let txid;
 			let twObj = {
 				created_at: data.created_at,
-				twt_id: data.id.toString(),
+				twt_id: data.id_str.toString(),
 				text: data.full_text,
 				user: {
 					name: data.user.name,
@@ -73,7 +70,7 @@ ${twToTwtch}`,
 				},
 			};
 			try {
-				txid = await post(twAccount, tweetContent, '', JSON.stringify(twObj), twToTwtch, '');
+				txid = await post(twAccount, '', '', JSON.stringify(twObj), twToTwtch, '');
 				resTweet(data.user.screen_name, replyTweet, `https://twetch.app/t/${txid}`);
 			} catch (e) {
 				console.log(`Error while posting to twetch. `, e);
