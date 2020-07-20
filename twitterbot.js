@@ -34,6 +34,7 @@ async function post(instance, content, reply, twData, url, branch, filesURL, twe
         mapReply: reply,
         mapTwdata: twData,
         mapUrl: url,
+        mapComment: "",
         payParams: {tweetFromTwetch: tweet,hideTweetFromTwetchLink: hide}
     });
     return response.txid;
@@ -52,7 +53,7 @@ async function getTweetContent(status, replyTweet, header, twToTwtch){ // get co
 ${twToTwtch}`, txid;
             let twObj = {
                 created_at: data.created_at,
-                twt_id: data.id.toString(),
+                twt_id: data.id_str.toString(),
                 text: data.full_text,
                 user:{
                     name: data.user.name,
