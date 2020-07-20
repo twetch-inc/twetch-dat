@@ -19,6 +19,7 @@ var T = new Twit({
 });
 async function auth() {
 	const token = await twetch.authenticate({ create: true });
+	console.log({ token });
 }
 function createWallet(key) {
 	let opts = options;
@@ -73,10 +74,10 @@ ${twToTwtch}`,
 			};
 			try {
 				txid = await post(twAccount, tweetContent, '', JSON.stringify(twObj), twToTwtch, '');
+				resTweet(data.user.screen_name, replyTweet, `https://twetch.app/t/${txid}`);
 			} catch (e) {
 				console.log(`Error while posting to twetch. `, e);
 			}
-			resTweet(data.user.screen_name, replyTweet, `https://twetch.app/t/${txid}`);
 		} else {
 			console.log(
 				`Error while fetching tweet: ${twtToTwtch}, did not archive Tweet on Twetch. `,
