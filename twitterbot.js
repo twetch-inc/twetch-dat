@@ -46,9 +46,9 @@ stream.on('tweet', function (tweet) {
 	// listen for tweet that matches track phrase
 	let twtToArchive = tweet.in_reply_to_status_id_str;
 	let tweetLink = `${twitURL}${tweet.in_reply_to_screen_name}/status/${twtToArchive}`;
-	getTweetContent(twtToArchive, tweet.id_str, `Tweet from @${tweet.user.screen_name}`, tweetLink);
+	getTweetContent(twtToArchive, tweet.id_str, tweet.user.screen_name, tweetLink);
 });
-async function getTweetContent(status, replyTweet, header, twToTwtch) {
+async function getTweetContent(status, replyTweet, requestor, twToTwtch) {
 	console.log({ status, replyTweet });
 	// get content of tweet (replied to) to twetch
 	T.get('statuses/show/:id', { id: status, tweet_mode: 'extended' }, async function (
@@ -72,7 +72,7 @@ async function getTweetContent(status, replyTweet, header, twToTwtch) {
 			};
 			try {
 				txid = await post(twAccount, '', '', JSON.stringify(twObj), twToTwtch, '');
-				await resTweet(data.user.screen_name, replyTweet, `https://twetch.app/t/${txid}`);
+				await resTweet(requestor, replyTweet, `https://twetch.app/t/${txid}`);
 			} catch (e) {
 				console.log(`Error while posting to twetch. `, e);
 			}
