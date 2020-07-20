@@ -37,7 +37,6 @@ async function post(instance, content, reply, twData, url, branch, filesURL, twe
         mapReply: reply,
         mapTwdata: twData,
         mapUrl: url,
-        mapComment: "",
         payParams: {tweetFromTwetch: tweet,hideTweetFromTwetchLink: hide}
     });
     return response.txid;
@@ -57,10 +56,7 @@ async function getTweetContent(status, replyTweet, header, twToTwtch) {
 		response
 	) {
 		if (response.statusCode === 200) {
-			let tweetContent = `${data.full_text}
-
-${twToTwtch}`,
-				txid;
+			let txid;
 			let twObj = {
 				created_at: data.created_at,
 				twt_id: data.id_str.toString(),
@@ -74,7 +70,7 @@ ${twToTwtch}`,
 				},
 			};
 			try {
-				txid = await post(twAccount, tweetContent, '', JSON.stringify(twObj), twToTwtch, '');
+				txid = await post(twAccount, '', '', JSON.stringify(twObj), twToTwtch, '');
 				resTweet(data.user.screen_name, replyTweet, `https://twetch.app/t/${txid}`);
 			} catch (e) {
 				console.log(`Error while posting to twetch. `, e);
