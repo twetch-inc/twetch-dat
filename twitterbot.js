@@ -108,7 +108,7 @@ async function resTweet(requestor, reply, url) {
 	} else {
 		twetchURL = url;
 	}
-	let twtContent = `OK @${requestor} I twetched it for you 🌟
+	let twtContent = `OK @${requestor} I twetched it for you
 
 This post is now forever on the blockchain
 
