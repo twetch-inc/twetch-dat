@@ -121,7 +121,7 @@ ${twetchURL}`;
 			data,
 			response
 		) {
-			if (response.statusCode === 200) {
+			if (response && response.statusCode === 200) {
 				console.log(
 					`Tweet successfully posted at: ${process.env.twitterURL}${process.env.twetchDat}/status/${data.id_str}`
 				);
