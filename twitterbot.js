@@ -6,6 +6,8 @@ var options = { clientIdentifier: process.env.clientIdentifier };
 const twetch = new Twetch(options);
 var twAccount = createWallet(process.env.privKey);
 auth();
+
+console.log(twetch.wallet.address());
 const twitURL = process.env.twitterURL;
 var T = new Twit({
 	consumer_key: process.env.consumer_key,
@@ -16,7 +18,7 @@ var T = new Twit({
 	strictSSL: false, // optional - requires SSL certificates to be valid.
 });
 async function auth() {
-	const token = await twetch.authenticate();
+	const token = await twetch.authenticate({ create: true });
 }
 function createWallet(key) {
 	let opts = options;
