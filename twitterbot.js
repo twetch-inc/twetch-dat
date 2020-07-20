@@ -32,14 +32,14 @@ function createWallet(key) {
 	return twInstance;
 }
 async function post(instance, content, reply, twData, url, branch, filesURL, tweet, hide) {
-    let response = await instance.buildAndPublish('twetch/post@0.0.1', {
-        bContent: `${content}${branch}${filesURL}`,
-        mapReply: reply,
-        mapTwdata: twData,
-        mapUrl: url,
-        payParams: {tweetFromTwetch: tweet,hideTweetFromTwetchLink: hide}
-    });
-    return response.txid;
+	let response = await instance.buildAndPublish('twetch/post@0.0.1', {
+		bContent: `${content}${branch}${filesURL}`,
+		mapReply: reply,
+		mapTwdata: twData,
+		mapUrl: url,
+		payParams: { tweetFromTwetch: tweet, hideTweetFromTwetchLink: hide },
+	});
+	return response.txid;
 }
 var stream = T.stream('statuses/filter', { track: process.env.trackPhrase });
 stream.on('tweet', function (tweet) {
@@ -49,6 +49,7 @@ stream.on('tweet', function (tweet) {
 	getTweetContent(twtToArchive, tweet.id_str, `Tweet from @${tweet.user.screen_name}`, tweetLink);
 });
 async function getTweetContent(status, replyTweet, header, twToTwtch) {
+	console.log({ status, replyTweet });
 	// get content of tweet (replied to) to twetch
 	T.get('statuses/show/:id', { id: status, tweet_mode: 'extended' }, async function (
 		err,
@@ -71,7 +72,7 @@ async function getTweetContent(status, replyTweet, header, twToTwtch) {
 			};
 			try {
 				txid = await post(twAccount, '', '', JSON.stringify(twObj), twToTwtch, '');
-				resTweet(data.user.screen_name, replyTweet, `https://twetch.app/t/${txid}`);
+				await resTweet(data.user.screen_name, replyTweet, `https://twetch.app/t/${txid}`);
 			} catch (e) {
 				console.log(`Error while posting to twetch. `, e);
 			}
@@ -99,6 +100,8 @@ async function tncPowLink(url) {
 	return res.short_link_url;
 }
 async function resTweet(requestor, reply, url) {
+	console.log({ reply });
+
 	let twetchURL;
 	if (process.env.useTncPow === '1') {
 		twetchURL = await tncPowLink(url);
@@ -111,21 +114,26 @@ This post is now forever on the blockchain
 
 Link to post 👇
 ${twetchURL}`;
-	T.post('statuses/update', { status: twtContent, in_reply_to_status_id: reply }, function (
-		err,
-		data,
-		response
-	) {
-		if (response.statusCode === 200) {
-			console.log(
-				`Tweet successfully posted at: ${process.env.twitterURL}${process.env.twetchDat}/status/${data.id_str}`
-			);
-		} else {
-			console.log(
-				`Error while posting reply to Tweet ${process.env.twitterURL}${requestor}/status/${reply}, failed to reply to @${requestor} on Twitter. `,
-				err
-			);
-			return;
-		}
+
+	return new Promise((resolve, reject) => {
+		T.post('statuses/update', { status: twtContent, in_reply_to_status_id: reply }, function (
+			err,
+			data,
+			response
+		) {
+			if (response.statusCode === 200) {
+				console.log(
+					`Tweet successfully posted at: ${process.env.twitterURL}${process.env.twetchDat}/status/${data.id_str}`
+				);
+				return resolve();
+			} else {
+				console.log(
+					`Error while posting reply to Tweet ${process.env.twitterURL}${requestor}/status/${reply}, failed to reply to @${requestor} on Twitter. `,
+					err
+				);
+
+				return reject(err);
+			}
+		});
 	});
 }
