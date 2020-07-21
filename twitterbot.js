@@ -72,7 +72,9 @@ async function getTweetContent(status, replyTweet, requestor, twToTwtch) {
 			};
 			try {
 				txid = await post(twAccount, '', '', JSON.stringify(twObj), twToTwtch, '');
-				await resTweet(requestor, replyTweet, `https://twetch.app/t/${txid}`);
+				if (txid) {
+					await resTweet(requestor, replyTweet, `https://twetch.app/t/${txid}`);
+				}
 			} catch (e) {
 				console.log(`Error while posting to twetch. `, e);
 			}
