@@ -57,6 +57,9 @@ async function getTweetContent(status, replyTweet, requestor, twToTwtch) {
 		response
 	) {
 		if (response.statusCode === 200) {
+			if (data.full_text.includes("I twetched it for you")){
+				return;
+			}
 			let txid;
 			let twObj = {
 				created_at: data.created_at,
