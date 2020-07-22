@@ -72,7 +72,7 @@ async function getTweetContent(status, replyTweet, requestor, twToTwtch) {
 			let twObj = {
 				created_at: data.created_at,
 				twt_id: data.id_str.toString(),
-				text: decodeHTMLCharCodes(data.full_text),
+				text: decodeHtmlCharCodes(data.full_text),
 				user: {
 					name: data.user.name,
 					screen_name: data.user.screen_name,
