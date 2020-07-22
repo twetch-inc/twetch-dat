@@ -5,6 +5,8 @@ const TonicPow = require('tonicpow-js');
 var options = { clientIdentifier: process.env.clientIdentifier };
 const twetch = new Twetch(options);
 var twAccount = createWallet(process.env.privKey);
+const jsdom = require("jsdom");
+const { JSDOM } = jsdom;
 auth();
 
 console.log(twetch.wallet.address());
@@ -50,9 +52,8 @@ stream.on('tweet', function (tweet) {
 });
 
 function decodeHtmlCharCodes(s) { 
-  const el = document.createElement("div");
-  el.innerHTML = el.textContent = s;
-  return el.innerText;
+    const dom = new JSDOM(`<!DOCTYPE html><p>${s}</p>`);
+    return dom.window.document.querySelector("p").textContent;
 }
 
 async function getTweetContent(status, replyTweet, requestor, twToTwtch) {
