@@ -5,6 +5,8 @@ const TonicPow = require('tonicpow-js');
 var options = { clientIdentifier: process.env.clientIdentifier };
 const twetch = new Twetch(options);
 var twAccount = createWallet(process.env.privKey);
+const jsdom = require("jsdom");
+const { JSDOM } = jsdom;
 auth();
 
 console.log(twetch.wallet.address());
@@ -48,6 +50,12 @@ stream.on('tweet', function (tweet) {
 	let tweetLink = `${twitURL}${tweet.in_reply_to_screen_name}/status/${twtToArchive}`;
 	getTweetContent(twtToArchive, tweet.id_str, tweet.user.screen_name, tweetLink);
 });
+
+function decodeHtmlCharCodes(s) { 
+    const dom = new JSDOM(`<!DOCTYPE html><p>${s}</p>`);
+    return dom.window.document.querySelector("p").textContent;
+}
+
 async function getTweetContent(status, replyTweet, requestor, twToTwtch) {
 	console.log({ status, replyTweet });
 	// get content of tweet (replied to) to twetch
@@ -64,7 +72,7 @@ async function getTweetContent(status, replyTweet, requestor, twToTwtch) {
 			let twObj = {
 				created_at: data.created_at,
 				twt_id: data.id_str.toString(),
-				text: data.full_text,
+				text: decodeHTMLCharCodes(data.full_text),
 				user: {
 					name: data.user.name,
 					screen_name: data.user.screen_name,
