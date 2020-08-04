@@ -82,14 +82,20 @@ async function getTweetContent(status, replyTweet, requestor, twToTwtch) {
 				},
 			};
 			try {
-				let prevTwetch = await twetch.query(`{allPosts(filter: {mapUrl: {equalTo: "${twToTwtch}"}}) {nodes {transaction}}}`);
+				let prevTwetch = await twetch.query(`{allPosts(filter: {mapUrl: {includes: "${twToTwtch}"}}) {nodes {transaction}}}`);
 				let posts = prevTwetch.allPosts.nodes;
 				if (posts.length > 0){
 					txid = await post(twAccount, '', '', '', '', process.env.twetchURL+posts[0].transaction, '');
 					T.get('search/tweets', {q: `https://twetch.app/t/${posts[0].transaction}`, count: 1}, async function (err, result, data){
+						console.log('result statuses: ', result.statuses.length);
 						if (txid) {
-							await resTweet(requestor, replyTweet, `https://twetch.app/t/${posts[0].transaction}`,
-							`${twitURL}${result.statuses[0].user.screen_name}/status/${result.statuses[0].id_str}`);
+							if (result.statuses.length > 0){
+								await resTweet(requestor, replyTweet, ``,
+								`${twitURL}${result.statuses[0].user.screen_name}/status/${result.statuses[0].id_str}`);
+							}
+							else {
+								await resTweet(requestor, replyTweet, `https://twetch.app/t/${posts[0].transaction}`,``, true);
+							}
 						}
 					})
 				}
@@ -125,7 +131,7 @@ async function tncPowLink(url) {
 	}
 	return res.short_link_url;
 }
-async function resTweet(requestor, reply, url, rt) {
+async function resTweet(requestor, reply, url, rt, branch) {
 	console.log({ reply });
 
 	let twetchURL;
@@ -134,7 +140,7 @@ async function resTweet(requestor, reply, url, rt) {
 	} else {
 		twetchURL = url;
 	}
-	let twtContent = `OK @${requestor} I twetched it for you
+	let twtContent = `OK @${requestor} I ${branch === true ? 'branched' : 'twetched'} it for you
 
 This post is now forever on the blockchain
 
