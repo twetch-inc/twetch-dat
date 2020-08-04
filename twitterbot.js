@@ -82,9 +82,28 @@ async function getTweetContent(status, replyTweet, requestor, twToTwtch) {
 				},
 			};
 			try {
-				txid = await post(twAccount, '', '', JSON.stringify(twObj), twToTwtch, '');
-				if (txid) {
-					await resTweet(requestor, replyTweet, `https://twetch.app/t/${txid}`);
+				let prevTwetch = await twetch.query(`{allPosts(filter: {mapUrl: {includes: "${twToTwtch}"}}) {nodes {transaction}}}`);
+				let posts = prevTwetch.allPosts.nodes;
+				if (posts.length > 0){
+					txid = await post(twAccount, '', '', '', '', process.env.twetchURL+posts[0].transaction, '');
+					T.get('search/tweets', {q: `https://twetch.app/t/${posts[0].transaction}`, count: 1}, async function (err, result, data){
+						console.log('result statuses: ', result.statuses.length);
+						if (txid) {
+							if (result.statuses.length > 0){
+								await resTweet(requestor, replyTweet, ``,
+								`${twitURL}${result.statuses[0].user.screen_name}/status/${result.statuses[0].id_str}`);
+							}
+							else {
+								await resTweet(requestor, replyTweet, `https://twetch.app/t/${posts[0].transaction}`,``, true);
+							}
+						}
+					})
+				}
+				else {
+					txid = await post(twAccount, '', '', JSON.stringify(twObj), twToTwtch, '');
+					if (txid) {
+						await resTweet(requestor, replyTweet, `https://twetch.app/t/${txid}`);
+					}
 				}
 			} catch (e) {
 				console.log(`Error while posting to twetch. `, e);
@@ -112,7 +131,7 @@ async function tncPowLink(url) {
 	}
 	return res.short_link_url;
 }
-async function resTweet(requestor, reply, url) {
+async function resTweet(requestor, reply, url, rt, branch) {
 	console.log({ reply });
 
 	let twetchURL;
@@ -121,12 +140,15 @@ async function resTweet(requestor, reply, url) {
 	} else {
 		twetchURL = url;
 	}
-	let twtContent = `OK @${requestor} I twetched it for you
+	let twtContent = `OK @${requestor} I ${branch === true ? 'branched' : 'twetched'} it for you
 
 This post is now forever on the blockchain
 
 Link to post 👇
 ${twetchURL}`;
+	if (rt){
+		twtContent = rt;
+	}
 
 	return new Promise((resolve, reject) => {
 		T.post('statuses/update', { status: twtContent, in_reply_to_status_id: reply }, function (
