@@ -82,9 +82,22 @@ async function getTweetContent(status, replyTweet, requestor, twToTwtch) {
 				},
 			};
 			try {
-				txid = await post(twAccount, '', '', JSON.stringify(twObj), twToTwtch, '');
-				if (txid) {
-					await resTweet(requestor, replyTweet, `https://twetch.app/t/${txid}`);
+				let prevTwetch = await twetch.query(`{allPosts(filter: {mapUrl: {equalTo: "${twToTwtch}"}}) {nodes {transaction}}}`);
+				let posts = prevTwetch.allPosts.nodes;
+				if (posts.length > 0){
+					txid = await post(twAccount, '', '', '', '', process.env.twetchURL+posts[0].transaction, '');
+					T.get('search/tweets', {q: `https://twetch.app/t/${posts[0].transaction}`, count: 1}, async function (err, result, data){
+						if (txid) {
+							await resTweet(requestor, replyTweet, `https://twetch.app/t/${posts[0].transaction}`,
+							`${twitURL}${result.statuses[0].user.screen_name}/status/${result.statuses[0].id_str}`);
+						}
+					})
+				}
+				else {
+					txid = await post(twAccount, '', '', JSON.stringify(twObj), twToTwtch, '');
+					if (txid) {
+						await resTweet(requestor, replyTweet, `https://twetch.app/t/${txid}`);
+					}
 				}
 			} catch (e) {
 				console.log(`Error while posting to twetch. `, e);
@@ -112,7 +125,7 @@ async function tncPowLink(url) {
 	}
 	return res.short_link_url;
 }
-async function resTweet(requestor, reply, url) {
+async function resTweet(requestor, reply, url, rt) {
 	console.log({ reply });
 
 	let twetchURL;
@@ -127,6 +140,9 @@ This post is now forever on the blockchain
 
 Link to post 👇
 ${twetchURL}`;
+	if (rt){
+		twtContent = rt;
+	}
 
 	return new Promise((resolve, reject) => {
 		T.post('statuses/update', { status: twtContent, in_reply_to_status_id: reply }, function (
