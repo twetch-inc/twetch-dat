@@ -7,6 +7,7 @@ const twetch = new Twetch(options);
 var twAccount = createWallet(process.env.privKey);
 const jsdom = require("jsdom");
 const { JSDOM } = jsdom;
+const tcoRegex = RegExp('https:\/\/t.co\/[a-zA-Z0-9\-\.]{10}', 'g');
 auth();
 
 console.log(twetch.wallet.address());
@@ -45,6 +46,12 @@ async function post(instance, content, reply, twData, url, branch, filesURL, twe
 }
 var stream = T.stream('statuses/filter', { track: process.env.trackPhrase });
 stream.on('tweet', function (tweet) {
+	if (tweet.display_text_range !== undefined) {
+		let trimTweet = tweet.text.slice(tweet.display_text_range[0], tweet.display_text_range[1]);
+		if (!trimTweet.includes(process.env.trackPhrase)) {
+			return;
+		}
+	}
 	// listen for tweet that matches track phrase
 	let twtToArchive = tweet.in_reply_to_status_id_str;
 	let tweetLink = `${twitURL}${tweet.in_reply_to_screen_name}/status/${twtToArchive}`;
@@ -56,6 +63,26 @@ function decodeHtmlCharCodes(s) {
     return dom.window.document.querySelector("p").textContent;
 }
 
+function getURL(tco, arr) {
+    let obj = arr.find(o => o.url === tco);
+    if (obj && obj.expanded_url !== undefined && obj.media_url_https === undefined){
+        return obj.expanded_url;
+    }
+    else {
+        return tco;
+    }
+}
+
+function getPhotos(arr) {
+	let photos = [];
+	for (let i=0;i<arr.length;i++) {
+		if (arr[i].media_url_https !== undefined) {
+			photos.push(arr[i].media_url_https);
+		}
+	}
+	return photos;
+}
+
 async function getTweetContent(status, replyTweet, requestor, twToTwtch) {
 	console.log({ status, replyTweet });
 	// get content of tweet (replied to) to twetch
@@ -65,14 +92,33 @@ async function getTweetContent(status, replyTweet, requestor, twToTwtch) {
 		response
 	) {
 		if (response.statusCode === 200) {
-			if (data.full_text.includes("I twetched it for you")){
+			if (data.full_text.includes("I twetched it for you") || data.full_text.includes("I branched it for you")){
 				return;
+			}
+			let match, content = data.full_text, photos = [];
+			if (data.entities !== undefined) {
+				let linkArr = data.entities.urls;
+				while ((match = tcoRegex.exec(data.full_text)) != null){
+					let i = 0;
+					content = content.replace(match[i], getURL(match[i], linkArr));
+					i++;
+				}
+			}
+			if (data.extended_entities !== undefined) {
+				let photoArr = data.extended_entities.media;
+				while ((match = tcoRegex.exec(data.full_text)) != null){
+					let i = 0;
+					content = content.replace(match[i], '');
+					i++;
+				}
+				photos = getPhotos(photoArr);
 			}
 			let txid;
 			let twObj = {
 				created_at: data.created_at,
 				twt_id: data.id_str.toString(),
-				text: decodeHtmlCharCodes(data.full_text),
+				text: decodeHtmlCharCodes(content),
+				media: photos,
 				user: {
 					name: data.user.name,
 					screen_name: data.user.screen_name,
@@ -85,7 +131,7 @@ async function getTweetContent(status, replyTweet, requestor, twToTwtch) {
 				let prevTwetch = await twetch.query(`{allPosts(filter: {mapUrl: {includes: "${twToTwtch}"}}) {nodes {transaction}}}`);
 				let posts = prevTwetch.allPosts.nodes;
 				if (posts.length > 0){
-					txid = await post(twAccount, '', '', '', '', process.env.twetchURL+posts[0].transaction, '');
+					txid = await post(twAccount, ' ', '', '', '', process.env.twetchURL+posts[0].transaction, '');
 					T.get('search/tweets', {q: `https://twetch.app/t/${posts[0].transaction}`, count: 1}, async function (err, result, data){
 						console.log('result statuses: ', result.statuses.length);
 						if (txid) {
@@ -100,10 +146,10 @@ async function getTweetContent(status, replyTweet, requestor, twToTwtch) {
 					})
 				}
 				else {
-					txid = await post(twAccount, '', '', JSON.stringify(twObj), twToTwtch, '');
+					txid = await post(twAccount, ' ', '', JSON.stringify(twObj), twToTwtch, '', '');
 					if (txid) {
 						await resTweet(requestor, replyTweet, `https://twetch.app/t/${txid}`);
-					}
+				 	}
 				}
 			} catch (e) {
 				console.log(`Error while posting to twetch. `, e);
