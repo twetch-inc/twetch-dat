@@ -156,7 +156,7 @@ async function getTweetContent(status, replyTweet, requestor, twToTwtch) {
 			}
 		} else {
 			console.log(
-				`Error while fetching tweet: ${twtToTwtch}, did not archive Tweet on Twetch. `,
+				`Error while fetching tweet: ${twToTwtch}, did not archive Tweet on Twetch. `,
 				err
 			);
 			return;
