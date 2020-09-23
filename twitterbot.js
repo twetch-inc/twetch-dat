@@ -4,7 +4,6 @@ const Twit = require('twit');
 const TonicPow = require('tonicpow-js');
 var options = { clientIdentifier: process.env.clientIdentifier };
 const twetch = new Twetch(options);
-var twAccount = createWallet(process.env.privKey);
 const jsdom = require("jsdom");
 const { JSDOM } = jsdom;
 const tcoRegex = RegExp('https:\/\/t.co\/[a-zA-Z0-9\-\.]{10}', 'g');
@@ -24,24 +23,26 @@ async function auth() {
 	const token = await twetch.authenticate({ create: true });
 	console.log({ token });
 }
-function createWallet(key) {
-	let opts = options;
-	opts.privateKey = key;
-	let wallet = new twetch.wallet.constructor(opts);
-	var twInstance = new Twetch(opts);
-	wallet.feeb = 0.5;
-	twInstance.wallet = wallet;
-	twInstance.wallet.backup();
-	return twInstance;
-}
-async function post(instance, content, reply, twData, url, branch, filesURL, tweet, hide) {
-	let response = await instance.buildAndPublish('twetch/post@0.0.1', {
-		bContent: `${content}${branch}${filesURL}`,
-		mapReply: reply,
+async function publishTx(instance, twData, url, branch) {
+	return await instance.buildAndPublish('twetch/post@0.0.1', {
+		bContent: ` ${branch}`,
 		mapTwdata: twData,
-		mapUrl: url,
-		payParams: { tweetFromTwetch: tweet, hideTweetFromTwetchLink: hide },
+		mapUrl: url
 	});
+}
+async function post(twData, url, branch) {
+	let instance = new Twetch({ 
+		clientIdentifier: process.env.clientIdentifier,
+		privateKey: process.env.privKey
+	});
+	let response = await publishTx(instance, twData, url, branch);console.log(response);
+	if (!response.txid) { // use backup key
+		instance = new Twetch({ 
+			clientIdentifier: process.env.clientIdentifier,
+			privateKey: process.env.backupPrivKey
+		});
+		response = await publishTx(instance, twData, url, branch);
+	}
 	return response.txid;
 }
 var stream = T.stream('statuses/filter', { track: process.env.trackPhrase });
@@ -131,7 +132,7 @@ async function getTweetContent(status, replyTweet, requestor, twToTwtch) {
 				let prevTwetch = await twetch.query(`{allPosts(filter: {mapUrl: {includes: "${twToTwtch}"}}) {nodes {transaction}}}`);
 				let posts = prevTwetch.allPosts.nodes;
 				if (posts.length > 0){
-					txid = await post(twAccount, ' ', '', '', '', process.env.twetchURL+posts[0].transaction, '');
+					txid = await post('', '', process.env.twetchURL+posts[0].transaction);
 					T.get('search/tweets', {q: `https://twetch.app/t/${posts[0].transaction}`, count: 1}, async function (err, result, data){
 						console.log('result statuses: ', result.statuses.length);
 						if (txid) {
@@ -146,7 +147,7 @@ async function getTweetContent(status, replyTweet, requestor, twToTwtch) {
 					})
 				}
 				else {
-					txid = await post(twAccount, ' ', '', JSON.stringify(twObj), twToTwtch, '', '');
+					txid = await post(JSON.stringify(twObj), twToTwtch, '');
 					if (txid) {
 						await resTweet(requestor, replyTweet, `https://twetch.app/t/${txid}`);
 				 	}
