@@ -7,6 +7,10 @@ const twetch = new Twetch(options);
 const jsdom = require("jsdom");
 const { JSDOM } = jsdom;
 const tcoRegex = RegExp('https:\/\/t.co\/[a-zA-Z0-9\-\.]{10}', 'g');
+const auth = async() => {
+	const token = await twetch.authenticate({ create: true });
+	console.log({ token });
+}
 auth();
 
 console.log(twetch.wallet.address());
@@ -16,26 +20,23 @@ var T = new Twit({
 	consumer_secret: process.env.consumer_secret,
 	access_token: process.env.access_token,
 	access_token_secret: process.env.access_token_secret,
-	timeout_ms: 60 * 1000, // optional HTTP request timeout to apply to all requests.
-	strictSSL: false, // optional - requires SSL certificates to be valid.
+	timeout_ms: 60 * 1000,
+	strictSSL: false,
 });
-async function auth() {
-	const token = await twetch.authenticate({ create: true });
-	console.log({ token });
-}
-async function publishTx(instance, twData, url, branch) {
+
+const publishTx = async(instance, twData, url, branch) => {
 	return await instance.buildAndPublish('twetch/post@0.0.1', {
 		bContent: ` ${branch}`,
 		mapTwdata: twData,
 		mapUrl: url
 	});
 }
-async function post(twData, url, branch) {
+const post = async(twData, url, branch) => {
 	let instance = new Twetch({ 
 		clientIdentifier: process.env.clientIdentifier,
 		privateKey: process.env.privKey
 	});
-	let response = await publishTx(instance, twData, url, branch);console.log(response);
+	let response = await publishTx(instance, twData, url, branch);
 	if (!response.txid) { // use backup key
 		instance = new Twetch({ 
 			clientIdentifier: process.env.clientIdentifier,
@@ -46,7 +47,7 @@ async function post(twData, url, branch) {
 	return response.txid;
 }
 var stream = T.stream('statuses/filter', { track: process.env.trackPhrase });
-stream.on('tweet', function (tweet) {
+stream.on('tweet', (tweet) => {
 	if (tweet.display_text_range !== undefined) {
 		let trimTweet = tweet.text.slice(tweet.display_text_range[0], tweet.display_text_range[1]);
 		if (!trimTweet.includes(process.env.trackPhrase)) {
@@ -56,15 +57,15 @@ stream.on('tweet', function (tweet) {
 	// listen for tweet that matches track phrase
 	let twtToArchive = tweet.in_reply_to_status_id_str;
 	let tweetLink = `${twitURL}${tweet.in_reply_to_screen_name}/status/${twtToArchive}`;
-	getTweetContent(twtToArchive, tweet.id_str, tweet.user.screen_name, tweetLink);
+	getTweetContent(twtToArchive, tweet.id_str, tweet.user.screen_name, tweetLink, tweet.user.id_str);
 });
 
-function decodeHtmlCharCodes(s) { 
+const decodeHtmlCharCodes = (s) => { 
     const dom = new JSDOM(`<!DOCTYPE html><p>${s}</p>`);
     return dom.window.document.querySelector("p").textContent;
 }
 
-function getURL(tco, arr) {
+const getURL = (tco, arr) => {
     let obj = arr.find(o => o.url === tco);
     if (obj && obj.expanded_url !== undefined && obj.media_url_https === undefined){
         return obj.expanded_url;
@@ -74,7 +75,7 @@ function getURL(tco, arr) {
     }
 }
 
-function getPhotos(arr) {
+const getPhotos = (arr) => {
 	let photos = [];
 	for (let i=0;i<arr.length;i++) {
 		if (arr[i].media_url_https !== undefined) {
@@ -84,14 +85,14 @@ function getPhotos(arr) {
 	return photos;
 }
 
-async function getTweetContent(status, replyTweet, requestor, twToTwtch) {
+const getTweetContent = async(status, replyTweet, requestor, twToTwtch, user_id) => {
 	console.log({ status, replyTweet });
 	// get content of tweet (replied to) to twetch
-	T.get('statuses/show/:id', { id: status, tweet_mode: 'extended' }, async function (
+	T.get('statuses/show/:id', { id: status, tweet_mode: 'extended' }, async(
 		err,
 		data,
 		response
-	) {
+	) => {
 		if (response.statusCode === 200) {
 			if (data.full_text.includes("I twetched it for you") || data.full_text.includes("I branched it for you")){
 				return;
@@ -120,6 +121,7 @@ async function getTweetContent(status, replyTweet, requestor, twToTwtch) {
 				twt_id: data.id_str.toString(),
 				text: decodeHtmlCharCodes(content),
 				media: photos,
+				curator: user_id,
 				user: {
 					name: data.user.name,
 					screen_name: data.user.screen_name,
@@ -133,8 +135,7 @@ async function getTweetContent(status, replyTweet, requestor, twToTwtch) {
 				let posts = prevTwetch.allPosts.nodes;
 				if (posts.length > 0){
 					txid = await post('', '', process.env.twetchURL+posts[0].transaction);
-					T.get('search/tweets', {q: `https://twetch.app/t/${posts[0].transaction}`, count: 1}, async function (err, result, data){
-						console.log('result statuses: ', result.statuses.length);
+					T.get('search/tweets', {q: `https://twetch.app/t/${posts[0].transaction}`, count: 1}, async(err, result, data) => {
 						if (txid) {
 							if (result.statuses.length > 0){
 								await resTweet(requestor, replyTweet, ``,
@@ -164,7 +165,7 @@ async function getTweetContent(status, replyTweet, requestor, twToTwtch) {
 		}
 	});
 }
-async function tncPowLink(url) {
+const tncPowLink = async(url) => {
 	let res;
 	await TonicPow.init(process.env.tonicPowToken);
 	try {
@@ -178,7 +179,7 @@ async function tncPowLink(url) {
 	}
 	return res.short_link_url;
 }
-async function resTweet(requestor, reply, url, rt, branch) {
+const resTweet = async(requestor, reply, url, rt, branch) => {
 	console.log({ reply });
 
 	let twetchURL;
@@ -198,11 +199,11 @@ ${twetchURL}`;
 	}
 
 	return new Promise((resolve, reject) => {
-		T.post('statuses/update', { status: twtContent, in_reply_to_status_id: reply }, function (
+		T.post('statuses/update', { status: twtContent, in_reply_to_status_id: reply }, (
 			err,
 			data,
 			response
-		) {
+		) => {
 			if (response && response.statusCode === 200) {
 				console.log(
 					`Tweet successfully posted at: ${process.env.twitterURL}${process.env.twetchDat}/status/${data.id_str}`
