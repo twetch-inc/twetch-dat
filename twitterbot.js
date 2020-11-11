@@ -195,7 +195,7 @@ This post is now forever on the blockchain
 Link to post 👇
 ${twetchURL}`;
 	if (rt){
-		twtContent = rt;
+		twtContent = `@${requestor} ${rt}`;
 	}
 
 	return new Promise((resolve, reject) => {
