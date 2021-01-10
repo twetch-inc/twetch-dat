@@ -180,6 +180,8 @@ const tncPowLink = async(url) => {
 	return res.short_link_url;
 }
 const resTweet = async(requestor, reply, url, rt, branch) => {
+	return;
+
 	console.log({ reply });
 
 	let twetchURL;
